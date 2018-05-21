@@ -130,6 +130,12 @@
 #include <asm/pv/grant_table.h>
 #include <asm/pv/mm.h>
 
+/* added by tofi */
+#include <asm/hvm/support.h>
+#include <asm/p2m.h>
+#include "mm/mm-locks.h"
+/* end */
+
 #include "pv/mm.h"
 
 /* Override macros from asm/page.h to make them work with mfn_t */
@@ -4021,7 +4027,41 @@ static int __do_update_va_mapping(
     cpumask_t     *mask = NULL;
     int            rc;
 
+    /* added by tofi */
+    //    gfn_t          p2m_input = _gfn(va);
+    mfn_t          p2m_result;
+    struct p2m_domain *my_p2m;
+    p2m_type_t my_pt;
+    p2m_access_t my_a;
+    //    pagefault_info_t pfinfo;
+    //    struct page_info *page_p;
+    gfn_t gfn;
+    //    p2m_type_t p2mt;
+    void *my_addr;
+    /* end */
+
     perfc_incr(calls_to_update_va);
+
+    /* added by tofi */
+    if (flags == 0xFF)  {
+        // hvm_translate_get_page(*(pg_owner->vcpu), va, true, 3, &pfinfo,
+        //                        &page_p, &gfn, &p2mt);
+        my_p2m = p2m_get_hostp2m(pg_owner);
+        gfn = _gfn(va);
+        gfn_lock(my_p2m, gfn, 0);
+        // p2m_result = my_p2m->get_entry(my_p2m, p2m_input, &my_pt, &my_a, 0,
+        p2m_result = my_p2m->get_entry(my_p2m, gfn, &my_pt, &my_a, 0,
+                                      NULL, NULL);
+    
+        if (mfn_x(p2m_result) != 0xffffffffffffffff) {
+            my_addr = vmap(&p2m_result, 1);
+            printk(XENLOG_INFO "First byte: %x\n", ((char*) my_addr)[0]); 
+            printk(XENLOG_INFO "Second byte: %x\n", ((char*) my_addr)[1]); 
+        }
+    
+        return mfn_x(p2m_result);
+    }
+    /* end */
 
     rc = xsm_update_va_mapping(XSM_TARGET, d, pg_owner, val);
     if ( rc )

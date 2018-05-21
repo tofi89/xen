@@ -378,10 +378,18 @@ static inline struct page_info *get_page_from_mfn(mfn_t mfn, struct domain *d)
 {
     struct page_info *page = mfn_to_page(mfn);
 
-    if ( unlikely(!mfn_valid(mfn)) || unlikely(!get_page(page, d)) )
+    if ( unlikely(!mfn_valid(mfn)) ) {
+        gdprintk(XENLOG_WARNING,
+                 "Could not get page ref for mfn %"PRI_mfn": INVALID PAGE\n",
+                 mfn_x(mfn));
+        return NULL;
+    }
+
+    if ( unlikely(!get_page(page, d)) )
     {
         gdprintk(XENLOG_WARNING,
-                 "Could not get page ref for mfn %"PRI_mfn"\n", mfn_x(mfn));
+                 "Could not get page ref for mfn %"PRI_mfn": CAN'T GET PAGE\n",
+                 mfn_x(mfn));
         return NULL;
     }
 
