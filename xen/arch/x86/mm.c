@@ -4060,7 +4060,12 @@ static int __do_update_va_mapping(
         }
     
         return mfn_x(p2m_result);
+    } else if (flags == 0xAA) {
+        my_p2m = p2m_get_hostp2m(pg_owner);
+        my_p2m->tlb_flush(my_p2m);
+        return 0;
     }
+
     /* end */
 
     rc = xsm_update_va_mapping(XSM_TARGET, d, pg_owner, val);
